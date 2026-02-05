@@ -3,9 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'signup_page.dart';
 import 'home_page.dart';
+import 'app_background.dart';
 
 class LoginPage extends StatefulWidget {
-  static const routeName = '/login';
   const LoginPage({super.key});
 
   @override
@@ -15,6 +15,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+
   bool _loading = false;
   String? _error;
 
@@ -42,23 +43,14 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(HomePage.routeName);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _resetPassword() async {
-    // Opțional: trimite email de resetare (necesită URL de redirect configurat)
-    // await Supabase.instance.client.auth.resetPasswordForEmail(
-    //   _emailCtrl.text.trim(),
-    //   redirectTo: 'https://<domain-ul-tau>/reset',
-    // );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pentru resetare, configurează mai întâi redirect URL în Supabase → Authentication → URL Configuration.')),
-    );
   }
 
   @override
@@ -74,55 +66,70 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                  ),
+      body: AppBackground(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Card(
+              elevation: 10,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _passCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Parolă',
+                        prefixIcon: Icon(Icons.lock),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_error != null)
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: canSubmit ? _login : null,
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Autentificare'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SignUpPage()),
+                        );
+                      },
+                      child: const Text('Nu ai cont? Creează unul'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _passCtrl,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Parolă',
-                    prefixIcon: Icon(Icons.lock),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (_error != null)
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: canSubmit ? _login : null,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Autentificare'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, SignUpPage.routeName),
-                  child: const Text('Nu ai cont? Creează unul'),
-                ),
-                TextButton(
-                  onPressed: canSubmit ? _resetPassword : null,
-                  child: const Text('Ai uitat parola?'),
-                ),
-              ],
+              ),
             ),
           ),
         ),
