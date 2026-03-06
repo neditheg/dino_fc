@@ -11,11 +11,15 @@ class Gql {
 
     final authLink = AuthLink(
       getToken: () async {
-        final token =
-            Supabase.instance.client.auth.currentSession?.accessToken;
+        final user = Supabase.instance.client.auth.currentUser;
+        final session = Supabase.instance.client.auth.currentSession;
+        final token = session?.accessToken;
+
+        print('SUPABASE USER ID: ${user?.id}');
+        print('APP METADATA: ${user?.appMetadata}');
+        print('ACCESS TOKEN EXISTS: ${token != null}');
 
         if (token == null) return null;
-
         return 'Bearer $token';
       },
     );

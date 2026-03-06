@@ -7,13 +7,12 @@ import 'src/login_page.dart';
 import 'src/signup_page.dart';
 import 'src/home_page.dart';
 import 'src/new_matchday_page.dart';
-
+import 'src/matchdays_page.dart';
 import 'src/graphql_client.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // necesar pentru graphql_flutter (cache)
   await initHiveForFlutter();
 
   await Supabase.initialize(
@@ -42,9 +41,8 @@ class DinoApp extends StatelessWidget {
         '/login': (_) => LoginPage(),
         '/signup': (_) => SignUpPage(),
         '/home': (_) => const HomePage(),
-
-        // ✅ admin -> formular etapă
         '/matchday/new': (_) => const NewMatchdayPage(),
+        '/matchdays': (_) => const MatchdaysPage(),
       },
       home: const AuthGate(),
     );

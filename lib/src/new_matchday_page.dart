@@ -58,13 +58,13 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
     final endStr =
         "${_end.hour.toString().padLeft(2, '0')}:${_end.minute.toString().padLeft(2, '0')}";
 
-    // ⚙️ default (le facem dinamice după ce publicăm prima etapă)
-    const int defaultClubId = 1;
-    const String defaultSeasonIdBigint = "1"; // ✅ BIGINT => trimitem ca string
+    // default values
+    const String defaultClubId = "1";
+    const String defaultSeasonIdBigint = "1";
 
     const insertMatchdayMutation = r'''
       mutation CreateMatchday(
-        $clubId: Int!,
+        $clubId: bigint!,
         $seasonId: bigint!,
         $matchDate: date!,
         $roundNo: Int!,
@@ -120,7 +120,6 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                       });
                     }
 
-                    // Handle result
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (result == null) return;
                       if (result.isLoading) return;
@@ -140,7 +139,7 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              "Etapa salvată ✅ (ID: ${created['id']}, round: ${created['round_no']})",
+                              "Etapa salvata ✅ (ID: ${created['id']}, round: ${created['round_no']})",
                             ),
                           ),
                         );
@@ -159,8 +158,10 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
                           const SizedBox(height: 14),
 
-                          const Text("Soccer field",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Soccer field",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                             value: _soccerField,
@@ -180,8 +181,10 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("Round (Etapa)",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Round (Etapa)",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _roundCtrl,
@@ -196,8 +199,10 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("Max players",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Max players",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
@@ -206,8 +211,9 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                                 child: TextFormField(
                                   initialValue: _maxPlayers.toString(),
                                   keyboardType: TextInputType.number,
-                                  decoration:
-                                      const InputDecoration(border: OutlineInputBorder()),
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
                                   validator: (v) {
                                     final n = int.tryParse(v ?? '');
                                     if (n == null || n <= 0) return "Invalid";
@@ -226,8 +232,10 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("Private / Public",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Private / Public",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
@@ -252,15 +260,18 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("Date",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Date",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               Expanded(
                                 child: InputDecorator(
-                                  decoration:
-                                      const InputDecoration(border: OutlineInputBorder()),
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
                                   child: Text(dateStr),
                                 ),
                               ),
@@ -273,15 +284,18 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("Start time",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Start time",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               Expanded(
                                 child: InputDecorator(
-                                  decoration:
-                                      const InputDecoration(border: OutlineInputBorder()),
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
                                   child: Text(startStr),
                                 ),
                               ),
@@ -294,15 +308,18 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("End time",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "End time",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           Row(
                             children: [
                               Expanded(
                                 child: InputDecorator(
-                                  decoration:
-                                      const InputDecoration(border: OutlineInputBorder()),
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
+                                  ),
                                   child: Text(endStr),
                                 ),
                               ),
@@ -315,8 +332,10 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           ),
 
                           const SizedBox(height: 16),
-                          const Text("Notes",
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          const Text(
+                            "Notes",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _notesCtrl,
@@ -325,7 +344,7 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                             enabled: !isSaving,
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(),
-                              hintText: "Detalii despre etapă…",
+                              hintText: "Detalii despre etapa…",
                             ),
                           ),
 

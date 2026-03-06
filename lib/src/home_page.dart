@@ -61,6 +61,14 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     const Divider(),
+                    ElevatedButton.icon(
+  onPressed: () {
+    Navigator.pushNamed(context, '/matchdays');
+  },
+  icon: const Icon(Icons.list),
+  label: const Text("Vezi etapele"),
+),
+const SizedBox(height: 10),
                     const SizedBox(height: 14),
 
                     if (isAdmin)
