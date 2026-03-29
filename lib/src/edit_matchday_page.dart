@@ -2,116 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class NewMatchdayPage extends StatefulWidget {
-  const NewMatchdayPage({super.key});
+class EditMatchdayPage extends StatefulWidget {
+  final Map<String, dynamic> matchday;
+
+  const EditMatchdayPage({
+    super.key,
+    required this.matchday,
+  });
 
   @override
-  State<NewMatchdayPage> createState() => _NewMatchdayPageState();
+  State<EditMatchdayPage> createState() => _EditMatchdayPageState();
 }
 
-class _NewMatchdayPageState extends State<NewMatchdayPage> {
+class _EditMatchdayPageState extends State<EditMatchdayPage> {
   final _formKey = GlobalKey<FormState>();
 
-  String _soccerField = 'Nastase&Marica Sports Club - București';
-  int _maxPlayers = 18;
-  bool _isPrivate = true;
-
-  DateTime _date = DateTime.now();
-  TimeOfDay _start = const TimeOfDay(hour: 20, minute: 0);
-  TimeOfDay _end = const TimeOfDay(hour: 21, minute: 30);
+  late String _soccerField;
+  late int _maxPlayers;
+  late bool _isPrivate;
+  late DateTime _date;
+  late TimeOfDay _start;
+  late TimeOfDay _end;
 
   late TextEditingController _roundCtrl;
   final _notesCtrl = TextEditingController();
 
-  int _nextRound = 1;
-  bool _loadingRound = true;
-  bool _dateHasMatchday = false;
-
   @override
   void initState() {
     super.initState();
-    _roundCtrl = TextEditingController(text: "1");
-    _fetchNextRound();
+    _initializeFromMatchday();
   }
 
-  Future<void> _fetchNextRound() async {
-    try {
-      final session = Supabase.instance.client.auth.currentSession;
-      final token = session?.accessToken;
+  void _initializeFromMatchday() {
+    final m = widget.matchday;
 
-      if (token == null) {
-        print('No auth token available');
-        if (mounted) {
-          setState(() {
-            _nextRound = 1;
-            _roundCtrl.text = "1";
-            _loadingRound = false;
-          });
-        }
-        return;
-      }
+    // Parse date
+    _date = DateTime.parse(m['match_date'] as String);
 
-      final httpLink = HttpLink(
-        'https://dino-fc-api.hasura.app/v1/graphql',
-        defaultHeaders: {
-          'Authorization': 'Bearer $token',
-        },
-      );
+    // Parse times (default if not available)
+    _start = const TimeOfDay(hour: 20, minute: 0);
+    _end = const TimeOfDay(hour: 21, minute: 30);
 
-      final client = GraphQLClient(
-        link: httpLink,
-        cache: GraphQLCache(store: InMemoryStore()),
-      );
+    _soccerField = 'Nastase&Marica Sports Club - București';
+    _maxPlayers = m['max_players'] as int? ?? 18;
+    _isPrivate = true;
 
-      const query = r'''
-        query GetMaxRound {
-          matchdays_aggregate(where: {season_id: {_eq: 1}}) {
-            aggregate {
-              max {
-                round_no
-              }
-            }
-          }
-        }
-      ''';
-
-      final result = await client.query(
-        QueryOptions(document: gql(query)),
-      );
-
-      if (!mounted) return;
-
-      if (result.hasException) {
-        print('GraphQL error: ${result.exception}');
-        setState(() {
-          _nextRound = 1;
-          _roundCtrl.text = "1";
-          _loadingRound = false;
-        });
-        return;
-      }
-
-      final maxRound =
-          result.data?['matchdays_aggregate']?['aggregate']?['max']?['round_no'];
-      final nextRound = (maxRound ?? 0) + 1;
-
-      print('Max round from DB: $maxRound, Next round: $nextRound');
-
-      setState(() {
-        _nextRound = nextRound;
-        _roundCtrl.text = nextRound.toString();
-        _loadingRound = false;
-      });
-    } catch (e) {
-      print('Exception fetching next round: $e');
-      if (mounted) {
-        setState(() {
-          _nextRound = 1;
-          _roundCtrl.text = "1";
-          _loadingRound = false;
-        });
-      }
-    }
+    _roundCtrl = TextEditingController(text: (m['round_no'] ?? 1).toString());
+    _notesCtrl.text = m['notes'] as String? ?? '';
   }
 
   @override
@@ -121,79 +58,6 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
     super.dispose();
   }
 
-  Future<void> _checkDateAvailability(DateTime selectedDate) async {
-    try {
-      final session = Supabase.instance.client.auth.currentSession;
-      final token = session?.accessToken;
-
-      if (token == null) {
-        setState(() => _dateHasMatchday = false);
-        return;
-      }
-
-      final dateStr =
-          "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
-
-      final httpLink = HttpLink(
-        'https://dino-fc-api.hasura.app/v1/graphql',
-        defaultHeaders: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      final client = GraphQLClient(
-        link: httpLink,
-        cache: GraphQLCache(store: InMemoryStore()),
-      );
-
-      const query = r'''
-        query CheckDateAvailability($date: date!) {
-          matchdays_aggregate(where: {match_date: {_eq: $date}, season_id: {_eq: 1}}) {
-            aggregate {
-              count
-            }
-          }
-        }
-      ''';
-
-      final result = await client.query(
-        QueryOptions(
-          document: gql(query),
-          variables: {"date": dateStr},
-        ),
-      );
-
-      if (!mounted) return;
-
-      if (result.hasException) {
-        print('Error checking date: ${result.exception}');
-        setState(() => _dateHasMatchday = false);
-        return;
-      }
-
-      final count =
-          result.data?['matchdays_aggregate']?['aggregate']?['count'] ?? 0;
-      final hasMatchday = count > 0;
-
-      setState(() => _dateHasMatchday = hasMatchday);
-
-      if (hasMatchday) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("⚠️ Aceeași dată are deja o etapă! Alege alta."),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Exception checking date: $e');
-      if (mounted) {
-        setState(() => _dateHasMatchday = false);
-      }
-    }
-  }
-
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -201,10 +65,7 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      setState(() => _date = picked);
-      await _checkDateAvailability(picked);
-    }
+    if (picked != null) setState(() => _date = picked);
   }
 
   Future<void> _pickTimeStart() async {
@@ -226,28 +87,26 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
     final endStr =
         "${_end.hour.toString().padLeft(2, '0')}:${_end.minute.toString().padLeft(2, '0')}";
 
-    // default values
     const String defaultClubId = "1";
     const String defaultSeasonIdBigint = "1";
 
-    const insertMatchdayMutation = r'''
-      mutation CreateMatchday(
-        $clubId: bigint!,
-        $seasonId: bigint!,
+    const updateMatchdayMutation = r'''
+      mutation UpdateMatchday(
+        $id: bigint!,
         $matchDate: date!,
         $roundNo: Int!,
         $notes: String,
         $maxPlayers: Int
       ) {
-        insert_matchdays_one(object: {
-          club_id: $clubId,
-          season_id: $seasonId,
-          match_date: $matchDate,
-          round_no: $roundNo,
-          is_locked: false,
-          notes: $notes,
-          max_players: $maxPlayers
-        }) {
+        update_matchdays_by_pk(
+          pk_columns: {id: $id},
+          _set: {
+            match_date: $matchDate,
+            round_no: $roundNo,
+            notes: $notes,
+            max_players: $maxPlayers
+          }
+        ) {
           id
           round_no
           match_date
@@ -256,7 +115,7 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
     ''';
 
     return Scaffold(
-      appBar: AppBar(title: const Text("New matchday")),
+      appBar: AppBar(title: const Text("Edit matchday")),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
@@ -267,28 +126,17 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Mutation(
-                  options: MutationOptions(document: gql(insertMatchdayMutation)),
+                  options: MutationOptions(document: gql(updateMatchdayMutation)),
                   builder: (runMutation, result) {
                     final isSaving = result?.isLoading ?? false;
 
                     void onSave() {
-                      if (_dateHasMatchday) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("❌ Nu poți adăuga etapă în aceeași zi!"),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
                       if (!_formKey.currentState!.validate()) return;
 
                       final roundNo = int.tryParse(_roundCtrl.text.trim()) ?? 1;
 
                       runMutation({
-                        "clubId": defaultClubId,
-                        "seasonId": defaultSeasonIdBigint,
+                        "id": widget.matchday['id'].toString(),
                         "matchDate": dateStr,
                         "roundNo": roundNo,
                         "notes": _notesCtrl.text.trim().isEmpty
@@ -312,12 +160,12 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                         return;
                       }
 
-                      final created = result.data?['insert_matchdays_one'];
-                      if (created != null) {
+                      final updated = result.data?['update_matchdays_by_pk'];
+                      if (updated != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              "Etapa salvata ✅ (ID: ${created['id']}, round: ${created['round_no']})",
+                              "Etapa actualizata ✅ (Round: ${updated['round_no']})",
                             ),
                           ),
                         );
@@ -331,7 +179,7 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                         shrinkWrap: true,
                         children: [
                           const Text(
-                            "Organize a new matchday",
+                            "Edit matchday",
                             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 14),
@@ -367,25 +215,15 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                           TextFormField(
                             controller: _roundCtrl,
                             keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
-                              suffixText: _loadingRound ? "Loading..." : null,
-                              suffixIcon: _loadingRound
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: Center(
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      ),
-                                    )
-                                  : null,
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
                             ),
                             validator: (v) {
                               final n = int.tryParse(v ?? '');
                               if (n == null || n <= 0) return "Invalid round";
                               return null;
                             },
-                            enabled: !isSaving && !_loadingRound,
+                            enabled: !isSaving,
                           ),
 
                           const SizedBox(height: 16),
@@ -423,34 +261,6 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
 
                           const SizedBox(height: 16),
                           const Text(
-                            "Private / Public",
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Radio<bool>(
-                                value: true,
-                                groupValue: _isPrivate,
-                                onChanged: isSaving
-                                    ? null
-                                    : (_) => setState(() => _isPrivate = true),
-                              ),
-                              const Text("Private"),
-                              const SizedBox(width: 18),
-                              Radio<bool>(
-                                value: false,
-                                groupValue: _isPrivate,
-                                onChanged: isSaving
-                                    ? null
-                                    : (_) => setState(() => _isPrivate = false),
-                              ),
-                              const Text("Public"),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-                          const Text(
                             "Date",
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
@@ -459,27 +269,10 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                             children: [
                               Expanded(
                                 child: InputDecorator(
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: _dateHasMatchday
-                                            ? Colors.red
-                                            : Colors.grey,
-                                        width: _dateHasMatchday ? 2 : 1,
-                                      ),
-                                    ),
-                                    errorText: _dateHasMatchday
-                                        ? "⚠️ Deja ocupată"
-                                        : null,
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(),
                                   ),
-                                  child: Text(
-                                    dateStr,
-                                    style: TextStyle(
-                                      color: _dateHasMatchday
-                                          ? Colors.red
-                                          : Colors.black,
-                                    ),
-                                  ),
+                                  child: Text(dateStr),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -570,7 +363,7 @@ class _NewMatchdayPageState extends State<NewMatchdayPage> {
                                   const SizedBox(width: 10),
                                   const Text("Saving..."),
                                 ] else
-                                  const Text("Save matchday"),
+                                  const Text("Update matchday"),
                               ],
                             ),
                           ),

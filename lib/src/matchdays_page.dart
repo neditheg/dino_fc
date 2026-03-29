@@ -78,6 +78,14 @@ class MatchdaysPage extends StatelessWidget {
   }
   ''';
 
+  static const deleteMatchdayMutation = r'''
+  mutation DeleteMatchday($id: bigint!) {
+    delete_matchdays_by_pk(id: $id) {
+      id
+    }
+  }
+  ''';
+
   bool _isAdmin() {
     final user = Supabase.instance.client.auth.currentUser;
     final hasura = user?.appMetadata['hasura'];
@@ -94,6 +102,81 @@ class MatchdaysPage extends StatelessWidget {
     }
 
     return false;
+  }
+
+  void _showDeleteConfirmation(
+    BuildContext context,
+    String matchdayId,
+    int roundNo,
+    Function()? refetch,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Șterge etapa?"),
+        content: Text("Ești sigur că vrei să ștergi Etapa $roundNo?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Anulează"),
+          ),
+          Mutation(
+            options: MutationOptions(
+              document: gql(deleteMatchdayMutation),
+              onCompleted: (_) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Etapa ștearsă ✅"),
+                  ),
+                );
+                refetch?.call();
+              },
+              onError: (error) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Eroare: ${error.toString()}"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
+            ),
+            builder: (runMutation, result) {
+              return TextButton(
+                onPressed: result?.isLoading ?? false
+                    ? null
+                    : () {
+                        runMutation({"id": matchdayId});
+                      },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                child: result?.isLoading ?? false
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text("Șterge"),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isMatchdayInPast(String matchDateStr) {
+    try {
+      final matchDate = DateTime.parse(matchDateStr);
+      final now = DateTime.now();
+      // Comparare doar pe zile (ignor orele)
+      return matchDate.isBefore(DateTime(now.year, now.month, now.day));
+    } catch (e) {
+      print('Error parsing match date: $e');
+      return false;
+    }
   }
 
   bool _isGuest(Map<String, dynamic>? p) {
@@ -331,6 +414,51 @@ class MatchdaysPage extends StatelessWidget {
                             );
                           },
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/matchday/edit',
+                                    arguments: m,
+                                  );
+                                },
+                                icon: const Icon(Icons.edit),
+                                label: const Text("Edit"),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Tooltip(
+                                message: _isMatchdayInPast(m['match_date'])
+                                    ? "Nu poți șterge etape jucate!"
+                                    : "Șterge etapa",
+                                child: OutlinedButton.icon(
+                                  onPressed: _isMatchdayInPast(m['match_date'])
+                                      ? null
+                                      : () {
+                                          _showDeleteConfirmation(
+                                            context,
+                                            m['id'].toString(),
+                                            m['round_no'],
+                                            refetch,
+                                          );
+                                        },
+                                  icon: const Icon(Icons.delete),
+                                  label: const Text("Delete"),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: _isMatchdayInPast(m['match_date'])
+                                        ? Colors.grey
+                                        : Colors.red,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
 
                       const SizedBox(height: 14),
@@ -379,14 +507,33 @@ class MatchdaysPage extends StatelessWidget {
                                       },
                                     ),
                                     builder: (runMutation, removeResult) {
-                                      return TextButton(
-                                        onPressed: () {
-                                          runMutation({
-                                            "matchdayId": m['id'].toString(),
-                                            "playerId": playerIdToRemove,
-                                          });
-                                        },
-                                        child: const Text("Remove"),
+                                      final isMatchdayPast =
+                                          _isMatchdayInPast(m['match_date']);
+                                      return IconButton(
+                                        onPressed: isMatchdayPast
+                                            ? null
+                                            : () {
+                                                runMutation({
+                                                  "matchdayId":
+                                                      m['id'].toString(),
+                                                  "playerId": playerIdToRemove,
+                                                });
+                                              },
+                                        icon: Icon(
+                                          Icons.close,
+                                          size: 18,
+                                          color: isMatchdayPast
+                                              ? Colors.grey
+                                              : Colors.red,
+                                        ),
+                                        tooltip: isMatchdayPast
+                                            ? "Nu poți șterge din etape jucate"
+                                            : "Elimină guest",
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 32,
+                                          minHeight: 32,
+                                        ),
                                       );
                                     },
                                   ),

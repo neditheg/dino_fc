@@ -8,6 +8,7 @@ import 'src/signup_page.dart';
 import 'src/home_page.dart';
 import 'src/new_matchday_page.dart';
 import 'src/matchdays_page.dart';
+import 'src/edit_matchday_page.dart';
 import 'src/graphql_client.dart';
 
 Future<void> main() async {
@@ -43,6 +44,15 @@ class DinoApp extends StatelessWidget {
         '/home': (_) => const HomePage(),
         '/matchday/new': (_) => const NewMatchdayPage(),
         '/matchdays': (_) => const MatchdaysPage(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/matchday/edit') {
+          final matchday = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => EditMatchdayPage(matchday: matchday),
+          );
+        }
+        return null;
       },
       home: const AuthGate(),
     );
